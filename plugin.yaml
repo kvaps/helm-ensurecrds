@@ -1,0 +1,7 @@
+name: "ensurecrds"
+version: "0.0.1"
+usage: "install and upgrade CRDs from the chart"
+description: |-
+  Install and upgrade CRDs from the chart
+useTunnel: false
+command: "$HELM_PLUGIN_DIR/ensurecrds.sh"
