@@ -1,5 +1,5 @@
 name: "ensurecrds"
-version: "0.0.1"
+version: "0.0.2"
 usage: "install and upgrade CRDs from the chart"
 description: |-
   Install and upgrade CRDs from the chart

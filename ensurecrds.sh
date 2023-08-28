@@ -52,8 +52,6 @@ helm template $args --include-crds | yq e "select(.kind|downcase == \"customreso
 | .metadata.labels.\"app.kubernetes.io/managed-by\"=\"Helm\"
 " > "$crds"
 if [ -s "$crds" ]; then
-  # We use kubectl create+replace instead of apply to avoid having last-applied configuration
-  $kubectl create -f "$crds" 2>/dev/null || true
-  $kubectl replace -f "$crds"
+  $kubectl apply --server-side -f "$crds"
 fi
 rm -f "$crds"
