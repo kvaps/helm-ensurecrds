@@ -3,7 +3,8 @@ set -e
 
 kubectl=kubectl
 helm=helm
-
+name=$1
+namespace="$HELM_NAMESPACE"
 while [ $# -gt 0 ]; do
   key="$1"
 
@@ -28,16 +29,6 @@ while [ $# -gt 0 ]; do
     kubectl="$kubectl --kubeconfig=${key##*=}"
     shift
     ;;
-  -n | --namespace)
-    kubectl="$kubectl --namespace $2"
-    helm="$helm --namespace $2"
-    shift
-    shift
-    ;;
-  --namespace=*)
-    kubectl="$kubectl --namespace=${key##*=}"
-    shift
-    ;;
   *)
     args="$args $1"
     shift
@@ -52,6 +43,6 @@ helm template $args --include-crds | yq e "select(.kind|downcase == \"customreso
 | .metadata.labels.\"app.kubernetes.io/managed-by\"=\"Helm\"
 " > "$crds"
 if [ -s "$crds" ]; then
-  $kubectl apply --server-side -f "$crds"
+  $kubectl apply --server-side --force-conflicts -f "$crds"
 fi
 rm -f "$crds"
