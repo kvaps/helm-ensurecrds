@@ -3,6 +3,8 @@ set -e
 
 kubectl=kubectl
 helm=helm
+name=
+namespace="$HELM_NAMESPACE"
 
 while [ $# -gt 0 ]; do
   key="$1"
@@ -16,6 +18,7 @@ while [ $# -gt 0 ]; do
     ;;
   --kube-context=*)
     kubectl="$kubectl --context=${key##*=}"
+    helm="$helm --kube-context=${key##*=}"
     shift
     ;;
   --kubeconfig)
@@ -26,6 +29,7 @@ while [ $# -gt 0 ]; do
     ;;
   --kubeconfig=*)
     kubectl="$kubectl --kubeconfig=${key##*=}"
+    helm="$helm --kubeconfig=${key##*=}"
     shift
     ;;
   -n | --namespace)
@@ -36,9 +40,17 @@ while [ $# -gt 0 ]; do
     ;;
   --namespace=*)
     kubectl="$kubectl --namespace=${key##*=}"
+    helm="$helm --namespace=${key##*=}"
+    shift
+    ;;
+  --*)
+    args="$args $1"
     shift
     ;;
   *)
+    if [ -z "$name" ]; then
+      name=$1
+    fi
     args="$args $1"
     shift
     ;;
@@ -46,7 +58,7 @@ while [ $# -gt 0 ]; do
 done
 
 crds=$(mktemp)
-helm template $args --include-crds | yq e "select(.kind|downcase == \"customresourcedefinition\")
+$helm template $args --include-crds | yq e "select(.kind|downcase == \"customresourcedefinition\")
 | .metadata.annotations.\"meta.helm.sh/release-name\"=\"$name\"
 | .metadata.annotations.\"meta.helm.sh/release-namespace\"=\"$namespace\"
 | .metadata.labels.\"app.kubernetes.io/managed-by\"=\"Helm\"
