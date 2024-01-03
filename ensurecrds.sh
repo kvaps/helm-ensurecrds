@@ -3,8 +3,9 @@ set -e
 
 kubectl=kubectl
 helm=helm
-name=$1
+name=
 namespace="$HELM_NAMESPACE"
+
 while [ $# -gt 0 ]; do
   key="$1"
 
@@ -17,6 +18,7 @@ while [ $# -gt 0 ]; do
     ;;
   --kube-context=*)
     kubectl="$kubectl --context=${key##*=}"
+    helm="$helm --kube-context=${key##*=}"
     shift
     ;;
   --kubeconfig)
@@ -27,9 +29,28 @@ while [ $# -gt 0 ]; do
     ;;
   --kubeconfig=*)
     kubectl="$kubectl --kubeconfig=${key##*=}"
+    helm="$helm --kubeconfig=${key##*=}"
+    shift
+    ;;
+  -n | --namespace)
+    kubectl="$kubectl --namespace $2"
+    helm="$helm --namespace $2"
+    shift
+    shift
+    ;;
+  --namespace=*)
+    kubectl="$kubectl --namespace=${key##*=}"
+    helm="$helm --namespace=${key##*=}"
+    shift
+    ;;
+  --*)
+    args="$args $1"
     shift
     ;;
   *)
+    if [ -z "$name" ]; then
+      name=$1
+    fi
     args="$args $1"
     shift
     ;;
@@ -37,12 +58,12 @@ while [ $# -gt 0 ]; do
 done
 
 crds=$(mktemp)
-helm template $args --include-crds | yq e "select(.kind|downcase == \"customresourcedefinition\")
+$helm template $args --include-crds | yq e "select(.kind|downcase == \"customresourcedefinition\")
 | .metadata.annotations.\"meta.helm.sh/release-name\"=\"$name\"
 | .metadata.annotations.\"meta.helm.sh/release-namespace\"=\"$namespace\"
 | .metadata.labels.\"app.kubernetes.io/managed-by\"=\"Helm\"
 " > "$crds"
 if [ -s "$crds" ]; then
-  $kubectl apply --server-side --force-conflicts -f "$crds"
+  $kubectl apply --server-side -f "$crds"
 fi
 rm -f "$crds"
