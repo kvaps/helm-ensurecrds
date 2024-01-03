@@ -1,69 +1,78 @@
 #!/usr/bin/env sh
 set -e
 
-kubectl=kubectl
-helm=helm
 name=
 namespace="$HELM_NAMESPACE"
+hargs=
+kargs=
 
 while [ $# -gt 0 ]; do
   key="$1"
 
   case $key in
   --kube-context)
-    kubectl="$kubectl --context $2"
-    helm="$helm --kube-context $2"
+    kargs="$kubectl --context $2"
+    hargs="$helm --kube-context $2"
     shift
     shift
     ;;
   --kube-context=*)
-    kubectl="$kubectl --context=${key##*=}"
-    helm="$helm --kube-context=${key##*=}"
+    kargs="$kubectl --context=${key##*=}"
+    hargs="$helm --kube-context=${key##*=}"
     shift
     ;;
   --kubeconfig)
-    kubectl="$kubectl --kubeconfig $2"
-    helm="$helm --kubeconfig $2"
+    kargs="$kubectl --kubeconfig $2"
+    hargs="$helm --kubeconfig $2"
     shift
     shift
     ;;
   --kubeconfig=*)
-    kubectl="$kubectl --kubeconfig=${key##*=}"
-    helm="$helm --kubeconfig=${key##*=}"
+    kargs="$kubectl --kubeconfig=${key##*=}"
+    hargs="$helm --kubeconfig=${key##*=}"
     shift
     ;;
   -n | --namespace)
-    kubectl="$kubectl --namespace $2"
-    helm="$helm --namespace $2"
+    kargs="$kubectl --namespace $2"
+    hargs="$helm --namespace $2"
     shift
     shift
     ;;
   --namespace=*)
-    kubectl="$kubectl --namespace=${key##*=}"
-    helm="$helm --namespace=${key##*=}"
+    kargs="$kubectl --namespace=${key##*=}"
+    hargs="$helm --namespace=${key##*=}"
     shift
     ;;
+  --force-conflicts)
+    kargs="$kargs --force-conflicts"
+    shift
+    ;;
+  --force-conflicts=*)
+    kargs="$kargs --force-conflicts=${key##*=}"
+    shift
+    ;;
+
   --*)
-    args="$args $1"
+    hargs="$hargs $1"
     shift
     ;;
   *)
     if [ -z "$name" ]; then
       name=$1
     fi
-    args="$args $1"
+    hargs="$hargs $1"
     shift
     ;;
   esac
 done
 
 crds=$(mktemp)
-$helm template $args --include-crds | yq e "select(.kind|downcase == \"customresourcedefinition\")
+helm template $hargs --include-crds | yq e "select(.kind|downcase == \"customresourcedefinition\")
 | .metadata.annotations.\"meta.helm.sh/release-name\"=\"$name\"
 | .metadata.annotations.\"meta.helm.sh/release-namespace\"=\"$namespace\"
 | .metadata.labels.\"app.kubernetes.io/managed-by\"=\"Helm\"
 " > "$crds"
 if [ -s "$crds" ]; then
-  $kubectl apply --server-side -f "$crds"
+  kubectl apply --server-side $kargs -f "$crds"
 fi
 rm -f "$crds"
